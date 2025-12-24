@@ -1,249 +1,245 @@
-# Novel Writer - Self-Learning Prose System
+# Novel Planning & Production Suite
 
-A self-improving novel chapter generation system that evaluates prose quality, learns from feedback, and automatically updates its writing prompts to improve over time.
+**AI-Powered Novel Planning, Self-Learning Prose Generation, and Music Integration**
 
-## 🎯 Features
+[![Phase 1](https://img.shields.io/badge/Phase%201-Complete-brightgreen)](migrations/DEPLOYMENT_SUMMARY.md)
+[![Phase 2](https://img.shields.io/badge/Phase%202-In%20Progress-yellow)](https://github.com/bermingham85/novel-writer/issues/1)
+[![Phase 3](https://img.shields.io/badge/Phase%203-Pending-lightgrey)](prompts/HANDOVER_Phase3_LLM_Integration.md)
 
-- **Automated Chapter Generation**: Uses GPT-4 to generate novel chapters based on style profiles
-- **5-Criteria Prose Evaluation**: Automatically evaluates chapters on clarity, engagement, pacing, voice consistency, and technical quality
-- **Self-Learning**: When average scores drop below 3.5/5, the system automatically improves its writing prompt
-- **User Feedback Learning**: Learn from liked/disliked passages to refine writing style
-- **Prompt Version Control**: Full versioning with rollback capability
-- **Performance Tracking**: Monitor improvement over time with built-in analytics views
+## 🎯 Project Overview
 
-## 📋 System Requirements
+A comprehensive system for planning and writing novels through conversational AI, combining:
+- **Conversational Planning** - Natural language novel planning with GPT-4
+- **Self-Learning Prose** - n8n workflow that improves writing over time
+- **Music Integration** - Suno API for character themes and story songs
+- **Quality Assurance** - Automated copyright and quality checks
 
-- Supabase account (PostgreSQL database)
-- n8n instance (http://192.168.50.246:5678)
-- OpenAI API key
+## 📊 Current Status
 
-## 🚀 Deployment Instructions
+### ✅ Phase 1: Database Schema (COMPLETE)
 
-### Step 1: Deploy Database Schema
+**Deployed:** 2025-12-24  
+**Database:** Supabase (Project: ylcepmvbjjnwmzvevxid, Region: eu-west-3)
 
-1. Open your Supabase dashboard: https://supabase.com/dashboard
-2. Select your project (or create a new one)
-3. Navigate to **SQL Editor**
-4. Copy the entire contents of `DEPLOY_ALL.sql`
-5. Paste into the SQL Editor
-6. Click **Run** to execute
+**12 Tables Created:**
+- 📚 **Core:** series, books
+- 👥 **Content:** characters, worlds, locations
+- 📖 **Story:** story_arcs, scene_outlines
+- 🎵 **Music:** songs (with Suno API fields)
+- 💬 **Planning:** planning_conversations, ideas
+- ✅ **Quality:** copyright_checks, content_quality_checks
 
-The script will create:
-- 6 tables (style_profiles, chapters, prose_evaluations, passage_feedback, prompt_versions, learning_insights)
-- 4 database functions (get_active_prompt, should_update_prompt, create_prompt_version, rollback_prompt_version)
-- 2 analytics views (style_profile_performance, recent_chapters_with_scores)
-- Sample "Default Literary Fiction" style profile
+**3 Helper Views:**
+- `active_series_summary` - Series overview with counts
+- `book_progress` - Writing progress tracking
+- `character_relationships` - Character network visualization
 
-### Step 2: Get Supabase Connection String
+**Sample Data:** "The Quantum Chronicles" series inserted for testing
 
-1. In Supabase Dashboard → **Settings** → **Database**
-2. Find **Connection String** section
-3. Select **Connection pooling** mode (recommended for n8n)
-4. Copy the connection string (format: `postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres`)
-5. Save this for n8n configuration
+[📄 View Full Deployment Summary](migrations/DEPLOYMENT_SUMMARY.md)
 
-Example format:
+### 🚧 Phase 2: API Layer (IN PROGRESS)
+
+**Status:** Assigned to Emergent (Design AI)  
+**Issue:** [#1](https://github.com/bermingham85/novel-writer/issues/1)
+
+**Deliverables:**
+- REST API or Supabase Edge Functions
+- Full CRUD operations for all 12 entities
+- n8n webhook integration (http://192.168.50.246:5678)
+- Suno API client (research + stub)
+- OpenAI service interfaces (prep for Phase 3)
+- Comprehensive API documentation
+
+[📋 View Full Phase 2 Handover](prompts/HANDOVER_Phase2_API_Layer.md)
+
+### ⏳ Phase 3: LLM Integration (PENDING)
+
+**Status:** Blocked until Phase 2 complete  
+**Scope:** OpenAI conversational planning with decision extraction
+
+**Key Features:**
+- Natural language conversations for novel planning
+- Knowledge base retrieval from existing chapters/characters
+- Automatic entity creation from conversation decisions
+- Multi-topic planning (character, plot, world, music, scenes)
+- Token-optimized context management
+
+[📋 View Full Phase 3 Handover](prompts/HANDOVER_Phase3_LLM_Integration.md)
+
+### 🎨 Phase 4: Frontend (NOT STARTED)
+
+**Tech Stack:** Next.js  
+**Features:** Chat interface, entity management, progress dashboards
+
+### 🔗 Phase 5: Integrations (NOT STARTED)
+
+**Integrations:** n8n novel-writer workflow, Suno music API, quality/copyright services
+
+## 🏗️ Architecture
+
 ```
-Host: aws-0-us-west-1.pooler.supabase.com
-Port: 6543
+┌─────────────────────────────────────────────────────────────┐
+│                         Frontend (Phase 4)                   │
+│                    Next.js Chat Interface                     │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────┴──────────────────────────────────┐
+│                      API Layer (Phase 2)                      │
+│              REST API / Supabase Edge Functions               │
+├───────────────────────────────────────────────────────────────┤
+│  │ CRUD Operations │ n8n Webhook │ Suno API │ OpenAI (P3) │ │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────┴──────────────────────────────────┐
+│                   Database (Phase 1) ✅                       │
+│                    Supabase PostgreSQL                        │
+├───────────────────────────────────────────────────────────────┤
+│  12 Tables │ 3 Views │ Multi-Project Partitioning            │
+└───────────────────────────────────────────────────────────────┘
+```
+
+## 🗄️ Database Schema
+
+### Multi-Project Architecture
+All tables partition by `series_id` - supports multiple novels/series in one database.
+
+### Core Entities
+- **Series** → Books → Style Profiles → Chapters (existing n8n integration)
+- **Characters** with relationships, traits, and arcs
+- **Worlds** → Locations (hierarchical)
+- **Story Arcs** with plot points
+- **Scene Outlines** linking characters + locations
+- **Songs** with Suno API integration fields
+- **Planning Conversations** storing GPT-4 dialogues and decisions
+- **Ideas** for brainstorming
+- **Quality & Copyright Checks** with similarity scoring
+
+### Integration Points
+- `books.style_profile_id` → Links to n8n novel-writer workflow
+- `songs.chapter_id` → Links songs to generated chapters
+- `book_progress` view → Tracks writing completion
+
+[📄 View SQL Schema](migrations/002_planning_suite_schema_safe.sql)
+
+## 🔗 Existing Integration: n8n Novel Writer
+
+**Status:** Operational ✅  
+**URL:** http://192.168.50.246:5678  
+**Workflow:** Self-learning prose generation system
+
+**Capabilities:**
+- Generates chapters using GPT-4o
+- Evaluates prose quality with GPT-4o-mini
+- Self-improves prompts based on evaluation feedback
+- Stores chapters, evaluations, and prompt versions in database
+
+[📄 View Workflow JSON](workflow.json)
+
+## 📁 Project Structure
+
+```
+novel-writer/
+├── migrations/
+│   ├── 002_planning_suite_schema.sql      # Original migration
+│   ├── 002_planning_suite_schema_safe.sql # Safe version (drops indexes first)
+│   ├── DEPLOYMENT_SUMMARY.md              # Full deployment report
+│   └── verify_series.sql                  # Verification queries
+├── prompts/
+│   ├── HANDOVER_Phase2_API_Layer.md       # Phase 2 specifications
+│   └── HANDOVER_Phase3_LLM_Integration.md # Phase 3 specifications
+├── DEPLOY_ALL.sql                         # Original novel-writer schema
+├── workflow.json                          # n8n workflow definition
+├── EMERGENT_PROMPT_Novel_Planning_Suite.md # Original planning prompt
+└── [Various documentation files]
+```
+
+## 🚀 Getting Started (For Emergent/Claude)
+
+### Phase 2 Implementation
+
+1. **Read the handover:** [prompts/HANDOVER_Phase2_API_Layer.md](prompts/HANDOVER_Phase2_API_Layer.md)
+2. **Access the issue:** [#1](https://github.com/bermingham85/novel-writer/issues/1)
+3. **Design the API layer** (Supabase Functions or Node/Express)
+4. **Create execution handover:** `prompts/HANDOVER_Phase2_EXECUTE.md`
+5. **Assign back to Warp** for execution
+
+### Database Connection (Phase 2 Needed)
+
+```
+Host: aws-1-eu-west-3.pooler.supabase.com
+Port: 5432
 Database: postgres
-User: postgres.xxxxxxxxxxxx
-Password: [your-password]
-SSL: Required
+User: postgres.ylcepmvbjjnwmzvevxid
+Password: [In handover document]
+Project URL: https://ylcepmvbjjnwmzvevxid.supabase.co
 ```
 
-### Step 3: Configure n8n Credentials
+## 🎯 Success Criteria by Phase
 
-1. Open n8n: http://192.168.50.246:5678
-2. Go to **Settings** → **Credentials**
-3. Create **PostgreSQL** credential:
-   - Name: `Supabase Novel Writer`
-   - Use connection string from Step 2
-   - Enable SSL
-   - Test connection
-4. Create **OpenAI** credential (if not already exists):
-   - Name: `OpenAI`
-   - API Key: Your OpenAI API key
+### Phase 2 (API)
+- [ ] All 12 entity types have full CRUD
+- [ ] API documented with examples
+- [ ] Database connection working
+- [ ] n8n webhook integration functional
+- [ ] Suno API client stubbed
+- [ ] OpenAI service interfaces defined
+- [ ] Basic tests passing
+- [ ] Execution handover created
 
-### Step 4: Import n8n Workflow
+### Phase 3 (LLM)
+- [ ] Conversational planning works
+- [ ] Knowledge base retrieval functional
+- [ ] Decision extraction accurate
+- [ ] Entities created from conversations
+- [ ] Token usage optimized
+- [ ] Streaming responses implemented
 
-1. In n8n, click **+** → **Import from File**
-2. Select `workflow.json`
-3. The workflow will be imported
-4. Update credential references:
-   - Replace `{{SUPABASE_CREDENTIALS_ID}}` with your Supabase credential ID
-   - Replace `{{OPENAI_CREDENTIALS_ID}}` with your OpenAI credential ID
-5. **Save** the workflow
-6. **Activate** the workflow
+### Phase 4 (Frontend)
+- [ ] Chat interface deployed
+- [ ] Entity management UI complete
+- [ ] Progress tracking dashboards live
 
-## 🎮 How to Use
+### Phase 5 (Integrations)
+- [ ] n8n workflow triggered from UI
+- [ ] Suno music generation working
+- [ ] Quality/copyright checks automated
 
-### Generate a Chapter
+## 👥 AI Agent Roles
 
-1. Open the "Novel Writer - Self-Learning Prose System" workflow
-2. Click **Execute Workflow** (manual trigger)
-3. The system will:
-   - Fetch the active style profile
-   - Get the current writing prompt
-   - Generate the next chapter
-   - Evaluate the prose quality (5 criteria)
-   - Save chapter and evaluation
-   - Check if prompt needs updating (if avg score < 3.5)
-   - Auto-update prompt if needed
+Following strict role separation for optimal efficiency:
 
-### Review Generated Chapters
+- **Warp (Execution AI)** - Deploys, executes, tests, commits code
+- **Emergent/Claude (Design AI)** - Designs, architectures, documents, no execution
+- **Handover Protocol** - Standardized prompts in `/prompts/` directory
 
-Query Supabase to view chapters:
-```sql
-SELECT * FROM recent_chapters_with_scores ORDER BY generated_at DESC;
-```
+## 📚 Documentation
 
-### Provide Passage Feedback
+- [Phase 1 Deployment Summary](migrations/DEPLOYMENT_SUMMARY.md)
+- [Phase 2 Handover Prompt](prompts/HANDOVER_Phase2_API_Layer.md)
+- [Phase 3 Handover Prompt](prompts/HANDOVER_Phase3_LLM_Integration.md)
+- [Original Planning Document](EMERGENT_PROMPT_Novel_Planning_Suite.md)
+- [n8n Workflow Specification](workflow.json)
 
-Mark passages you like or dislike to help the system learn:
-```sql
-INSERT INTO passage_feedback (
-  chapter_id, 
-  passage_text, 
-  liked, 
-  feedback_reason
-) VALUES (
-  '[chapter-uuid]',
-  'The passage text you liked/disliked',
-  true,  -- or false
-  'Why you liked/disliked it'
-);
-```
+## 🔐 Security Note
 
-### View Performance Metrics
+This is a **personal-use tool**. Authentication is basic (API keys or Supabase RLS). No enterprise security implemented.
 
-```sql
-SELECT * FROM style_profile_performance;
-```
+## 📜 License
 
-### Rollback Prompt Version
+Private Project - All Rights Reserved
 
-If a prompt update makes things worse:
-```sql
-SELECT rollback_prompt_version('[version-uuid]'::uuid);
-```
+## 🤝 Contributing
 
-## 📊 Database Schema Overview
-
-### Core Tables
-
-- **style_profiles**: Writing style definitions and base prompts
-- **chapters**: Generated novel chapters with metadata
-- **prose_evaluations**: Quality scores (1-5 on 5 criteria)
-- **passage_feedback**: User likes/dislikes on specific passages
-- **prompt_versions**: Version-controlled writing prompts
-- **learning_insights**: Extracted patterns from feedback
-
-### Key Functions
-
-- `get_active_prompt(profile_id)`: Get current active writing prompt
-- `should_update_prompt(profile_id)`: Check if avg score < 3.5 in last 3 chapters
-- `create_prompt_version(...)`: Create new prompt version with tracking
-- `rollback_prompt_version(version_id)`: Revert to previous prompt
-
-## 🔧 Customization
-
-### Create a New Style Profile
-
-```sql
-INSERT INTO style_profiles (name, description, base_prompt) VALUES (
-  'Dark Gothic Horror',
-  'Gothic horror with atmospheric dread and psychological tension',
-  'Write in a gothic horror style with rich atmospheric details, psychological unease, and Victorian-era sensibilities. Use archaic language sparingly. Build tension through environment and implication rather than explicit horror.'
-);
-
--- Create initial prompt version
-INSERT INTO prompt_versions (style_profile_id, version_number, prompt_text, trigger_reason, is_active)
-SELECT id, 1, base_prompt, 'Initial version', true
-FROM style_profiles WHERE name = 'Dark Gothic Horror';
-```
-
-### Adjust Auto-Update Threshold
-
-Edit the `should_update_prompt` function to change the score threshold (default: 3.5):
-
-```sql
-CREATE OR REPLACE FUNCTION should_update_prompt(p_style_profile_id UUID)
-RETURNS BOOLEAN AS $$
-DECLARE
-    recent_avg_score NUMERIC(3,2);
-BEGIN
-    SELECT AVG(pe.overall_score) INTO recent_avg_score
-    FROM prose_evaluations pe
-    JOIN chapters c ON c.id = pe.chapter_id
-    WHERE c.style_profile_id = p_style_profile_id
-    ORDER BY pe.evaluated_at DESC
-    LIMIT 3;
-    
-    -- Change 3.5 to your preferred threshold
-    RETURN (recent_avg_score IS NOT NULL AND recent_avg_score < 3.8);
-END;
-$$ LANGUAGE plpgsql;
-```
-
-## 📈 Monitoring & Analytics
-
-### View Prompt Evolution
-
-```sql
-SELECT 
-  version_number,
-  LEFT(prompt_text, 100) as prompt_preview,
-  trigger_reason,
-  avg_score_before,
-  is_active,
-  created_at
-FROM prompt_versions
-WHERE style_profile_id = '[your-profile-id]'
-ORDER BY version_number DESC;
-```
-
-### Analyze Score Trends
-
-```sql
-SELECT 
-  chapter_number,
-  overall_score,
-  clarity_score,
-  engagement_score,
-  pacing_score,
-  generated_at
-FROM recent_chapters_with_scores
-WHERE style_profile = 'Default Literary Fiction'
-ORDER BY chapter_number;
-```
-
-## 🐛 Troubleshooting
-
-### Workflow Not Executing
-- Check n8n credentials are properly configured
-- Verify Supabase connection string is correct
-- Ensure SSL is enabled for Supabase connection
-
-### Chapters Not Generating
-- Verify OpenAI API key is valid and has credits
-- Check OpenAI API rate limits
-- Review n8n execution logs
-
-### Prompt Not Auto-Updating
-- Verify average score is below threshold (< 3.5)
-- Check that at least 3 chapters have been generated
-- Review `should_update_prompt` function logic
-
-## 📝 License
-
-This project is provided as-is for personal use.
-
-## 🤝 Support
-
-For issues or questions, review the n8n execution logs and Supabase database logs.
+**Phase 2 Contributors:** Emergent (Design AI) assigned to [Issue #1](https://github.com/bermingham85/novel-writer/issues/1)
 
 ---
 
-**Created**: December 23, 2024
-**Version**: 1.0.0
+**Built with:**
+- Supabase (PostgreSQL)
+- n8n (Workflow Automation)
+- OpenAI GPT-4 (Planning + Generation)
+- Suno API (Music)
+- Next.js (Frontend - planned)
+
+**Co-Authored-By:** Warp <agent@warp.dev>
