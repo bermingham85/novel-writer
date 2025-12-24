@@ -1,0 +1,483 @@
+{
+  "name": "Novel Writer - Self-Learning Prose System",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, name FROM style_profiles WHERE active = true LIMIT 1"
+      },
+      "id": "get-style-profile",
+      "name": "Get Active Style Profile",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "{{SUPABASE_CREDENTIALS_ID}}",
+          "name": "Supabase Novel Writer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT get_active_prompt('{{ $json.id }}'::uuid) as prompt"
+      },
+      "id": "get-active-prompt",
+      "name": "Get Active Prompt",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [650, 300],
+      "credentials": {
+        "postgres": {
+          "id": "{{SUPABASE_CREDENTIALS_ID}}",
+          "name": "Supabase Novel Writer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(MAX(chapter_number), 0) + 1 as next_chapter FROM chapters WHERE style_profile_id = '{{ $node[\"Get Active Style Profile\"].json.id }}'::uuid"
+      },
+      "id": "get-next-chapter-num",
+      "name": "Get Next Chapter Number",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [850, 300],
+      "credentials": {
+        "postgres": {
+          "id": "{{SUPABASE_CREDENTIALS_ID}}",
+          "name": "Supabase Novel Writer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $node[\"Get Active Prompt\"].json.prompt }}\n\nWrite chapter {{ $node[\"Get Next Chapter Number\"].json.next_chapter }} of the novel. Target length: 2000-3000 words."
+            }
+          ]
+        }
+      },
+      "id": "generate-chapter",
+      "name": "Generate Chapter",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1050, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "{{OPENAI_CREDENTIALS_ID}}",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = $input.item.json.output;\nconst words = content.trim().split(/\\s+/);\nconst wordCount = words.length;\n\n// Extract title from first line if exists\nconst lines = content.split('\\n');\nconst title = lines[0].replace(/^#+\\s*/, '').trim();\n\nreturn {\n  content: content,\n  word_count: wordCount,\n  title: title || `Chapter ${$node[\"Get Next Chapter Number\"].json.next_chapter}`,\n  style_profile_id: $node[\"Get Active Style Profile\"].json.id,\n  chapter_number: $node[\"Get Next Chapter Number\"].json.next_chapter\n};"
+      },
+      "id": "process-chapter",
+      "name": "Process Chapter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "chapters",
+        "columns": "style_profile_id,chapter_number,title,content,word_count",
+        "returnFields": "id"
+      },
+      "id": "save-chapter",
+      "name": "Save Chapter",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "{{SUPABASE_CREDENTIALS_ID}}",
+          "name": "Supabase Novel Writer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "content": "Evaluate this prose chapter on 5 criteria (rate 1-5 for each):\n\n1. CLARITY: How clear and understandable is the writing?\n2. ENGAGEMENT: How compelling and engaging is the narrative?\n3. PACING: How well-paced is the chapter?\n4. VOICE_CONSISTENCY: How consistent is the narrative voice?\n5. TECHNICAL_QUALITY: Grammar, word choice, sentence structure quality?\n\nChapter:\n{{ $node[\"Process Chapter\"].json.content }}\n\nRespond ONLY with valid JSON in this exact format:\n{\n  \"clarity_score\": 4.5,\n  \"engagement_score\": 4.0,\n  \"pacing_score\": 3.5,\n  \"voice_consistency_score\": 4.2,\n  \"technical_quality_score\": 4.8,\n  \"evaluation_notes\": \"Brief summary of evaluation\",\n  \"strengths\": [\"strength 1\", \"strength 2\"],\n  \"weaknesses\": [\"weakness 1\", \"weakness 2\"]\n}"
+            }
+          ]
+        }
+      },
+      "id": "evaluate-prose",
+      "name": "Evaluate Prose Quality",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1650, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "{{OPENAI_CREDENTIALS_ID}}",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the evaluation JSON from the AI response\nconst evalText = $input.item.json.output;\nconst evaluation = JSON.parse(evalText);\n\nreturn {\n  chapter_id: $node[\"Save Chapter\"].json.id,\n  clarity_score: evaluation.clarity_score,\n  engagement_score: evaluation.engagement_score,\n  pacing_score: evaluation.pacing_score,\n  voice_consistency_score: evaluation.voice_consistency_score,\n  technical_quality_score: evaluation.technical_quality_score,\n  evaluation_notes: evaluation.evaluation_notes,\n  strengths: evaluation.strengths,\n  weaknesses: evaluation.weaknesses\n};"
+      },
+      "id": "parse-evaluation",
+      "name": "Parse Evaluation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "prose_evaluations",
+        "columns": "chapter_id,clarity_score,engagement_score,pacing_score,voice_consistency_score,technical_quality_score,evaluation_notes,strengths,weaknesses"
+      },
+      "id": "save-evaluation",
+      "name": "Save Evaluation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2050, 300],
+      "credentials": {
+        "postgres": {
+          "id": "{{SUPABASE_CREDENTIALS_ID}}",
+          "name": "Supabase Novel Writer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT should_update_prompt('{{ $node[\"Get Active Style Profile\"].json.id }}'::uuid) as should_update"
+      },
+      "id": "check-should-update",
+      "name": "Check If Update Needed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2250, 300],
+      "credentials": {
+        "postgres": {
+          "id": "{{SUPABASE_CREDENTIALS_ID}}",
+          "name": "Supabase Novel Writer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.should_update }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-update-needed",
+      "name": "If Update Needed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT pe.*, c.style_profile_id FROM prose_evaluations pe JOIN chapters c ON c.id = pe.chapter_id WHERE c.style_profile_id = '{{ $node[\"Get Active Style Profile\"].json.id }}'::uuid ORDER BY pe.evaluated_at DESC LIMIT 5"
+      },
+      "id": "get-recent-evaluations",
+      "name": "Get Recent Evaluations",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2650, 200],
+      "credentials": {
+        "postgres": {
+          "id": "{{SUPABASE_CREDENTIALS_ID}}",
+          "name": "Supabase Novel Writer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM passage_feedback WHERE chapter_id IN (SELECT id FROM chapters WHERE style_profile_id = '{{ $node[\"Get Active Style Profile\"].json.id }}'::uuid) ORDER BY created_at DESC LIMIT 10"
+      },
+      "id": "get-passage-feedback",
+      "name": "Get Passage Feedback",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2650, 300],
+      "credentials": {
+        "postgres": {
+          "id": "{{SUPABASE_CREDENTIALS_ID}}",
+          "name": "Supabase Novel Writer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "content": "You are a writing coach improving a prose generation prompt.\n\nCurrent prompt:\n{{ $node[\"Get Active Prompt\"].json.prompt }}\n\nRecent evaluation scores (last 5 chapters):\n{{ JSON.stringify($node[\"Get Recent Evaluations\"].json) }}\n\nUser feedback on passages:\n{{ JSON.stringify($node[\"Get Passage Feedback\"].json) }}\n\nAnalyze the weaknesses and user feedback. Generate an IMPROVED prompt that:\n1. Addresses the lowest-scoring criteria\n2. Incorporates patterns from liked passages\n3. Avoids patterns from disliked passages\n4. Maintains the core style\n\nRespond with ONLY the new improved prompt text, no explanation."
+            }
+          ]
+        }
+      },
+      "id": "generate-improved-prompt",
+      "name": "Generate Improved Prompt",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [2850, 250],
+      "credentials": {
+        "openAiApi": {
+          "id": "{{OPENAI_CREDENTIALS_ID}}",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT create_prompt_version('{{ $node[\"Get Active Style Profile\"].json.id }}'::uuid, '{{ $json.output.replace(/'/g, \"''\") }}', 'Auto-update due to low scores', '{{ $node[\"Save Evaluation\"].json.id }}'::uuid) as new_version_id"
+      },
+      "id": "save-new-prompt-version",
+      "name": "Save New Prompt Version",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [3050, 250],
+      "credentials": {
+        "postgres": {
+          "id": "{{SUPABASE_CREDENTIALS_ID}}",
+          "name": "Supabase Novel Writer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const chapterNumber = $node[\"Get Next Chapter Number\"].json.next_chapter;\nconst evaluation = $node[\"Parse Evaluation\"].json;\nconst overallScore = (\n  evaluation.clarity_score + \n  evaluation.engagement_score + \n  evaluation.pacing_score + \n  evaluation.voice_consistency_score + \n  evaluation.technical_quality_score\n) / 5;\n\nconst updated = $node[\"If Update Needed\"]?.json?.should_update || false;\n\nreturn {\n  message: `Chapter ${chapterNumber} generated and evaluated`,\n  overall_score: overallScore.toFixed(2),\n  evaluation_summary: evaluation.evaluation_notes,\n  prompt_updated: updated,\n  chapter_id: $node[\"Save Chapter\"].json.id\n};"
+      },
+      "id": "final-summary",
+      "name": "Final Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2650, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Active Style Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Style Profile": {
+      "main": [
+        [
+          {
+            "node": "Get Active Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Prompt": {
+      "main": [
+        [
+          {
+            "node": "Get Next Chapter Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Next Chapter Number": {
+      "main": [
+        [
+          {
+            "node": "Generate Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Chapter": {
+      "main": [
+        [
+          {
+            "node": "Process Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Chapter": {
+      "main": [
+        [
+          {
+            "node": "Save Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Chapter": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Prose Quality",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Prose Quality": {
+      "main": [
+        [
+          {
+            "node": "Parse Evaluation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Evaluation": {
+      "main": [
+        [
+          {
+            "node": "Save Evaluation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Evaluation": {
+      "main": [
+        [
+          {
+            "node": "Check If Update Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If Update Needed": {
+      "main": [
+        [
+          {
+            "node": "If Update Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Update Needed": {
+      "main": [
+        [
+          {
+            "node": "Get Recent Evaluations",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Passage Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Final Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recent Evaluations": {
+      "main": [
+        [
+          {
+            "node": "Generate Improved Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Passage Feedback": {
+      "main": [
+        [
+          {
+            "node": "Generate Improved Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Improved Prompt": {
+      "main": [
+        [
+          {
+            "node": "Save New Prompt Version",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save New Prompt Version": {
+      "main": [
+        [
+          {
+            "node": "Final Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-12-23T11:23:47.000Z",
+  "versionId": "1"
+}
