@@ -425,8 +425,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_key
 
 # Suno API
-SUNO_API_KEY=your_suno_key
-SUNO_API_URL=https://api.suno.ai/v1/generate
+SUNO_API_KEY=d8038c1c9195ea0da6007532da395b28
+SUNO_API_URL=https://api.sunoaimusic.com/api/v1
 
 # n8n
 N8N_WEBHOOK_URL=http://192.168.50.246:5678/webhook/novel-writer
