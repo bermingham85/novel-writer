@@ -425,7 +425,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_key
 
 # Suno API
-SUNO_API_KEY=d8038c1c9195ea0da6007532da395b28
+SUNO_API_KEY=<get from jesse-novel-factory .env>
 SUNO_API_URL=https://api.sunoaimusic.com/api/v1
 
 # n8n

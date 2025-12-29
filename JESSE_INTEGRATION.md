@@ -50,11 +50,11 @@ Characters requiring ElevenLabs voice IDs:
 
 ## Shared API Keys
 
-Both systems use:
-```
-SUNO_API_KEY=d8038c1c9195ea0da6007532da395b28
-ELEVENLABS_API_KEY=sk_ee0380a1d582835d18d086bb8802737805eb159ffc66f452
-```
+Both systems use keys from `jesse-novel-factory/.env`:
+- SUNO_API_KEY
+- ELEVENLABS_API_KEY
+- OPENAI_API_KEY
+- ANTHROPIC_API_KEY
 
 ## Data Flow
 
